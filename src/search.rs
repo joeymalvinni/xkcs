@@ -13,6 +13,7 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
 
         for word in query.split_whitespace() {
             // TODO: add transcript once transcript generated for all comics
+            // TODO: fix partial matches not working
             // rank += (tf-idf of alt * alt weight) + (tf-idf of title * title weight); where body weight + title weight = 1 <-------------------
 
             rank += calculate_tf(&word, &comic, &Field::Title) * calculate_idf(&word, &doc.frequency, &Field::Title, doc.comics.len()) * 0.6f32;

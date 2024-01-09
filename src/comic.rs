@@ -1,17 +1,14 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Read, Write};
 use futures::{stream, StreamExt};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow;
 use reqwest;
-use crate::utils::{DATA_PATH, Field};
+use crate::utils::{DATA_PATH, URL, INFO};
 
 const PARALLEL_REQUESTS: usize = 8;
-const URL: &str = "https://xkcd.com";
-const INFO: &str = "info.0.json";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Comic {
@@ -92,12 +89,35 @@ pub async fn download_all(latest: Comic, client: &reqwest::Client) -> anyhow::Re
     };
 
     let file = File::create(DATA_PATH)?;
-    serde_json::to_writer(file, &doc)?;
+    let _ = serde_json::to_writer(file, &doc)?;
 
     Ok(())
 }
 
-pub async fn download_and_append_to_comics(comic_number: u16, comics: &mut Vec<Comic>, client: &reqwest::Client) -> anyhow::Result<()> { // check if comics contains the comic, using iterators
+
+pub async fn download_and_append_to_document(comic_number: u16, client: &reqwest::Client) -> anyhow::Result<()> { 
+    let file = File::open(DATA_PATH)?;
+    let mut doc: Document  = serde_json::from_reader(file)?;
+
+    if !doc.comics.iter().any(|com| com.comic.num == comic_number) {
+        let mut comic: Comic = client.get(format!("{URL}/{comic_number}/{INFO}")).send().await?.json().await?;
+
+        let index: ComicIndex = index_comic(&mut comic, &mut doc.frequency).await?;
+
+        doc.comics.push(index);
+
+        let file = File::create(DATA_PATH)?;
+        let _ = serde_json::to_writer(file, &doc)?;
+    } else {
+        println!("Comic already exists in data");
+    }
+
+    Ok(())
+}
+
+/*
+pub async fn download_and_append_to_comics(comic_number: u16, comics: &mut Vec<Comic>, client: &reqwest::Client) -> anyhow::Result<()> {
+    // check if comics contains the comic, using iterators
     if !comics.iter().any(|com| com.num == comic_number) {
         let comic: Comic = client.get(format!("{URL}/{comic_number}/{INFO}")).send().await?.json().await?;
 
@@ -106,13 +126,14 @@ pub async fn download_and_append_to_comics(comic_number: u16, comics: &mut Vec<C
         comics.push(comic);
 
         let file = File::create(DATA_PATH)?;
-        serde_json::to_writer(file, &comics);
+        let _ = serde_json::to_writer(file, &comics)?;
     } else {
         println!("Comic already exists in data");
     }
 
     Ok(())
 }
+*/
 
 pub async fn index_comic(c: &mut Comic, df: &mut ComicFrequency) -> anyhow::Result<ComicIndex> {
     let mut alt_frequencies: HashMap<String, usize> = HashMap::new();

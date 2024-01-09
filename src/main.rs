@@ -2,9 +2,9 @@ mod comic;
 mod search;
 mod utils;
 
-use comic::download_all;
+use comic::{download_all, download_and_append_to_document};
 use search::search;
-use utils::Field;
+use utils::{URL, INFO, RED, RESET, GREEN, CYAN, MAGENTA};
 use clap::Parser;
 use std::fs::File;
 
@@ -21,6 +21,14 @@ struct Args {
     /// Limit the amount of search results. Defaults to 10.
     #[clap(short, long)]
     limit: Option<usize>,
+
+    /// Download and index a specific comic.
+    #[clap(short, long)]
+    download: Option<usize>,
+
+    /// Download all comics.
+    #[clap(short = 'D', long)]
+    download_all: bool, 
 }
 
 // TODO: if a value is provided to --download, download [and index] that specific comic
@@ -41,27 +49,55 @@ async fn main() -> Result<(), anyhow::Error> {
         query = s;
     }
 
-    println!("{limit}");
-
     let client = reqwest::Client::new();
 
-    /*
-    let mut latest: Comic = client.get(format!("{URL}/{INFO}")).send().await?.json().await?;
-    download_all(latest, &client).await?;
-    */
-    
-    let file = File::open(utils::DATA_PATH)?;
-    let mut doc: comic::Document  = serde_json::from_reader(file)?;
+    if args.download_all {
+        let latest: comic::Comic = client.get(format!("{URL}/{INFO}")).send().await?.json().await?;
 
-    // download_and_append_to_comics(YOUR_COMIC_NUMBER as u16, &mut comics, &client).await?;
+        println!("Downloading and indexing comics 1..={}.", latest.num);
 
-    let mut res = search(&query, &mut doc);
-    let top_20: Vec<(f32, comic::ComicIndex)> = res.into_iter().take(limit).collect();
+        download_all(latest, &client).await?;
+    } else if let Some(c) = args.download {
+        println!("Downloading comic number {c}");
+        download_and_append_to_document(c as u16, &client).await?;
+    } else {
+        let file = File::open(utils::DATA_PATH)?;
+        let mut doc: comic::Document  = serde_json::from_reader(file)?;
 
-    println!("Search query: {query}");
-    for (rank, c) in top_20 {
-        println!("#{} - {rank} - {}", c.comic.num, c.comic.title);
+        if query.is_empty() {
+            println!("Search query is required.");
+            return Ok(());
+        }
+
+        let res = search(&query, &mut doc);
+        let top_20: Vec<(f32, comic::ComicIndex)> = res.into_iter().take(limit).collect();
+
+        let padding = 4;
+        let max_rank_len = 6 + padding;
+        let max_name_len = top_20.iter().map(|(_, c)| c.comic.title.len()).max().unwrap_or(0).max(6) + padding;
+        let max_num_len = top_20.iter().map(|(_, c)| c.comic.num.to_string().len()).max().unwrap_or(0).max(13) + padding;
+
+        println!("┌{0:─<width_rank$}┬{0:─<width_rank$}┬{0:─<width_name$}┬{0:─<width_num$}┐", "", width_rank = max_rank_len, width_name = max_name_len, width_num = max_num_len);
+        println!("│{MAGENTA} {:<width_rank$}{RESET}│{CYAN} {:<width_rank$}{RESET}│{GREEN} {:<width_name$}{RESET}│{RED} {:<width_num$}{RESET}│", "Index", "Rank", "Title", "Comic Number", width_rank = max_rank_len-1, width_name = max_name_len-1, width_num = max_num_len-1);
+        println!("├{0:─<width_rank$}┼{0:─<width_rank$}┼{0:─<width_name$}┼{0:─<width_num$}┤", "", width_rank = max_rank_len, width_name = max_name_len, width_num = max_num_len);
+
+        for (index, (rank, c)) in top_20.iter().enumerate() {
+            println!(
+                "│ {:<width_rank$}│ {:<width_rank$.4}│ {:<width_name$}│ {:<width_num$}│",
+                index + 1,
+                -rank,
+                c.comic.title,
+                c.comic.num,
+                width_rank = max_rank_len-1,
+                width_name = max_name_len-1,
+                width_num = max_num_len-1,
+            );
+        }
+
+        println!("└{0:─<width_rank$}┴{0:─<width_rank$}┴{0:─<width_name$}┴{0:─<width_num$}┘", "", width_rank = max_rank_len, width_name = max_name_len, width_num = max_num_len);
     }
+
+
 
     Ok(())
 }
