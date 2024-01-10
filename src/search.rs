@@ -34,8 +34,12 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
         }
     }
 
+    result.sort_by(|(a, c1), (b, c2)| if a == b {
+        c1.comic.title.partial_cmp(&c2.comic.title).unwrap()
+    } else {
+        a.partial_cmp(b).expect(&format!("{a} and {a} are not comparable"))
+    });
 
-    result.sort_by(|(a, _), (b, _)| a.partial_cmp(b).expect(&format!("{a} and {a} are not comparable")));
 
     result
 }
