@@ -68,7 +68,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
         if query.is_empty() {
             // enter interactive mode
-            search::interactive_mode(&mut doc);
+            let _ = search::interactive_mode(&mut doc);
         } else {
             let res = search(&query, &mut doc);
             let top_20: Vec<(f32, comic::ComicIndex)> = res.into_iter().take(limit).collect();

@@ -1,7 +1,7 @@
 use std::io::{Write, stdout};
 
 use crossterm::{
-    execute, queue,
+    execute,
     style::{self, Stylize}, cursor, terminal::{EnterAlternateScreen, LeaveAlternateScreen}
 };
 use crossterm::event::{Event, KeyCode, KeyEvent};
@@ -24,7 +24,6 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
         for word in query.split_whitespace() {
             // TODO: add transcript once transcript generated for all comics
             // TODO: fix partial matches not working
-            // rank += (tf-idf of alt * alt weight) + (tf-idf of title * title weight); where body weight + title weight = 1 <-------------------
 
             rank += calculate_tf(&word, &comic, &Field::Title) * calculate_idf(&word, &doc.frequency, &Field::Title, doc.comics.len()) * 0.6f32;
             rank +=  calculate_tf(&word, &comic, &Field::Alt) * calculate_idf(&word, &doc.frequency, &Field::Alt, doc.comics.len()) * 0.4f32; 
@@ -93,7 +92,6 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                         ..
                     } => {
                         match c {
-                            'q' => break,
                             _ => {
                                 search_string.push(c);
                             },
@@ -129,32 +127,13 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                         kind: event::KeyEventKind::Press,
                         ..
                     } => {
-                        if let Some(last_char) = search_string.chars().rev().next() {
-                            if last_char.is_whitespace() {
-                                search_string.pop(); 
-                                while let Some(char) = search_string.chars().rev().next() {
-                                    if char.is_whitespace() {
-                                        break;
-                                    }
-                                    search_string.pop(); // Remove characters until a space is found
-                                }
-                            }
-                        }
-                    }
-                    KeyEvent {
-                        code: KeyCode::BackTab,
-                        modifiers: event::KeyModifiers::CONTROL,
-                        kind: event::KeyEventKind::Press,
-                        ..
-                    } => {
                         search_string.clear();
                     }
                     _ => {}
                 }
 
-                execute!(stdout, cursor::MoveTo(0, terminal::size().unwrap().1 - 1))?;
-                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine))?;
-                write!(stdout, "Search: {}", search_string)?;
+                execute!(stdout, cursor::MoveTo(0, 27))?;
+                write!(stdout, "\x1b[KSearch: {}", search_string)?;
 
                 let res = search(&search_string, doc);
                 let top_20: Vec<(f32, ComicIndex)> = res.into_iter().take(20).collect();

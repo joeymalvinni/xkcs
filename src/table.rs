@@ -1,6 +1,6 @@
 use crate::comic;
 use crate::utils::{RED, GREEN, MAGENTA, CYAN, RESET};
-use std::io::{Write, stdout, Stdout};
+use std::io::{stdout};
 use crossterm::{execute, cursor, terminal};
 
 pub fn print_table(results: Vec<(f32, comic::ComicIndex)>) {
