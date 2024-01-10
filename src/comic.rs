@@ -8,6 +8,7 @@ use anyhow;
 use reqwest;
 use bincode;
 use crate::utils::{DATA_PATH, URL, INFO};
+use gxhash::GxHashMap;
 
 const PARALLEL_REQUESTS: usize = 8;
 
@@ -25,9 +26,9 @@ pub struct Comic {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ComicIndex {
-    pub title_freq: HashMap<String, usize>,
+    pub title_freq: GxHashMap<String, usize>,
     pub title_len: usize,
-    pub alt_freq: HashMap<String, usize>,
+    pub alt_freq: GxHashMap<String, usize>,
     pub alt_len: usize,
     pub comic: Comic,
 }
@@ -35,8 +36,8 @@ pub struct ComicIndex {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ComicFrequency {
-    pub alt_freq: HashMap<String, usize>,
-    pub title_freq: HashMap<String, usize>,
+    pub alt_freq: GxHashMap<String, usize>,
+    pub title_freq: GxHashMap<String, usize>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -49,8 +50,8 @@ pub async fn download_all(latest: Comic, client: &reqwest::Client) -> anyhow::Re
     let c = Mutex::new(Vec::new());
 
     let frequencies = Arc::new(Mutex::new(ComicFrequency {
-        title_freq: HashMap::new(),
-        alt_freq: HashMap::new(),
+        title_freq: GxHashMap::default(),
+        alt_freq: GxHashMap::default(),
     }));
 
     let indices = (1..=latest.num).collect::<Vec<_>>();
@@ -122,8 +123,8 @@ pub async fn download_and_append_to_document(comic_number: u16, client: &reqwest
 }
 
 pub async fn index_comic(c: &mut Comic, df: &mut ComicFrequency) -> anyhow::Result<ComicIndex> {
-    let mut alt_frequencies: HashMap<String, usize> = HashMap::new();
-    let mut title_frequencies: HashMap<String, usize> = HashMap::new();
+    let mut alt_frequencies: GxHashMap<String, usize> = GxHashMap::default();
+    let mut title_frequencies: GxHashMap<String, usize> = GxHashMap::default();
 
     // index alt text
     let mut alt = c.alt.to_lowercase();
