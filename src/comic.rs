@@ -102,7 +102,8 @@ pub async fn download_all(latest: Comic, client: &reqwest::Client) -> anyhow::Re
 
 pub async fn download_and_append_to_document(comic_number: u16, client: &reqwest::Client) -> anyhow::Result<()> { 
     let file = File::open(DATA_PATH)?;
-    let mut doc: Document  = serde_json::from_reader(file)?;
+    let reader = std::io::BufReader::new(file);
+    let mut doc: Document = bincode::deserialize_from(reader)?;
 
     if !doc.comics.iter().any(|com| com.comic.num == comic_number) {
         let mut comic: Comic = client.get(format!("{URL}/{comic_number}/{INFO}")).send().await?.json().await?;
