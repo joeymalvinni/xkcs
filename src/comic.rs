@@ -6,6 +6,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow;
 use reqwest;
+use bincode;
 use crate::utils::{DATA_PATH, URL, INFO};
 
 const PARALLEL_REQUESTS: usize = 8;
@@ -80,16 +81,20 @@ pub async fn download_all(latest: Comic, client: &reqwest::Client) -> anyhow::Re
         })
         .await;
 
+    println!("Finished downloading and indexing.");
     let c = c.lock().await;
     let frequencies = frequencies.lock().await.clone();
 
+    println!("Locked mutexes");
     let doc = Document {
         comics: (*c).to_vec(),
         frequency: frequencies,
     };
 
+    println!("Creating file");
     let file = File::create(DATA_PATH)?;
-    let _ = serde_json::to_writer(file, &doc)?;
+    let _ = bincode::serialize_into(file, &doc)?;
+    println!("Serialized files");
 
     Ok(())
 }
@@ -107,33 +112,13 @@ pub async fn download_and_append_to_document(comic_number: u16, client: &reqwest
         doc.comics.push(index);
 
         let file = File::create(DATA_PATH)?;
-        let _ = serde_json::to_writer(file, &doc)?;
+        let _ = bincode::serialize_into(file, &doc)?;
     } else {
         println!("Comic already exists in data");
     }
 
     Ok(())
 }
-
-/*
-pub async fn download_and_append_to_comics(comic_number: u16, comics: &mut Vec<Comic>, client: &reqwest::Client) -> anyhow::Result<()> {
-    // check if comics contains the comic, using iterators
-    if !comics.iter().any(|com| com.num == comic_number) {
-        let comic: Comic = client.get(format!("{URL}/{comic_number}/{INFO}")).send().await?.json().await?;
-
-        println!("Adding comic number {comic_number}: \"{}\" to comics", comic.title);
-
-        comics.push(comic);
-
-        let file = File::create(DATA_PATH)?;
-        let _ = serde_json::to_writer(file, &comics)?;
-    } else {
-        println!("Comic already exists in data");
-    }
-
-    Ok(())
-}
-*/
 
 pub async fn index_comic(c: &mut Comic, df: &mut ComicFrequency) -> anyhow::Result<ComicIndex> {
     let mut alt_frequencies: HashMap<String, usize> = HashMap::new();

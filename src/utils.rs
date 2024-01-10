@@ -1,6 +1,6 @@
 pub const URL: &str = "https://xkcd.com";
 
-pub const DATA_PATH: &str = "data/document.json";
+pub const DATA_PATH: &str = "data/document";
 pub const INFO: &str = "info.0.json";
 pub const RED: &str = "\x1b[31m";
 pub const GREEN: &str = "\x1b[32m";

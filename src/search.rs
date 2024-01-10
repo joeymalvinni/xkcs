@@ -1,8 +1,18 @@
+use std::io::{Write, stdout};
+
+use crossterm::{
+    execute, queue,
+    style::{self, Stylize}, cursor, terminal::{EnterAlternateScreen, LeaveAlternateScreen}
+};
+use crossterm::event::{Event, KeyCode, KeyEvent};
+use crossterm::{event, terminal};
+use std::time::Duration;
+
 use crate::comic::{ComicIndex, ComicFrequency, Document};
 use crate::utils::Field;
+use crate::table;
 
 pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
-    // preprocessing on query
     let mut query = q.to_lowercase();
     query.retain(|c| !r#"(),".;:'"#.contains(c)); // strip punctuation
 
@@ -61,4 +71,106 @@ fn calculate_idf(string: &str, df: &ComicFrequency, field: &Field, length: usize
             (num / length).log10()
         },
     }
+}
+
+pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
+    let mut stdout = stdout();
+    terminal::enable_raw_mode().expect("Could not turn on Raw mode");
+    execute!(stdout, terminal::Clear(terminal::ClearType::All))?;
+    execute!(stdout, cursor::Hide)?;
+    execute!(stdout, EnterAlternateScreen)?;
+
+    let mut search_string = String::new();
+    
+    loop {
+        if event::poll(Duration::from_millis(500)).expect("Error") {
+            if let Event::Key(event) = event::read().expect("Failed to read line") { /* add this line */
+                match event {
+                    KeyEvent {
+                        code: KeyCode::Char(c),
+                        modifiers: event::KeyModifiers::NONE,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        match c {
+                            'q' => break,
+                            _ => {
+                                search_string.push(c);
+                            },
+                        }
+                    }
+                    KeyEvent {
+                        code: KeyCode::Char('q'),
+                        modifiers: event::KeyModifiers::CONTROL,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        break;
+                    }
+                    KeyEvent {
+                        code: KeyCode::Char(c),
+                        modifiers: event::KeyModifiers::SHIFT,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        search_string.push(c);
+                    }
+                    KeyEvent {
+                        code: KeyCode::Backspace,
+                        modifiers: event::KeyModifiers::NONE,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        search_string.pop();
+                    }
+                    KeyEvent {
+                        code: KeyCode::Backspace,
+                        modifiers: event::KeyModifiers::CONTROL,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        if let Some(last_char) = search_string.chars().rev().next() {
+                            if last_char.is_whitespace() {
+                                search_string.pop(); 
+                                while let Some(char) = search_string.chars().rev().next() {
+                                    if char.is_whitespace() {
+                                        break;
+                                    }
+                                    search_string.pop(); // Remove characters until a space is found
+                                }
+                            }
+                        }
+                    }
+                    KeyEvent {
+                        code: KeyCode::BackTab,
+                        modifiers: event::KeyModifiers::CONTROL,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        search_string.clear();
+                    }
+                    _ => {}
+                }
+
+                execute!(stdout, cursor::MoveTo(0, terminal::size().unwrap().1 - 1))?;
+                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine))?;
+                write!(stdout, "Search: {}", search_string)?;
+
+                let res = search(&search_string, doc);
+                let top_20: Vec<(f32, ComicIndex)> = res.into_iter().take(20).collect();
+                
+                table::print_table(top_20);
+
+                stdout.flush()?;
+            };
+        };
+    }
+
+    stdout.flush()?;
+    execute!(stdout, LeaveAlternateScreen)?;
+
+    terminal::disable_raw_mode().expect("Could not turn on Raw mode");
+    execute!(stdout, terminal::Clear(terminal::ClearType::All))?;
+    execute!(stdout, cursor::Show)?;
+    Ok(())
 }
