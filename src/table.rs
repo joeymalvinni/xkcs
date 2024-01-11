@@ -3,12 +3,12 @@ use crate::utils::{RED, GREEN, MAGENTA, CYAN, RESET};
 use std::io::{stdout};
 use crossterm::{execute, cursor, terminal};
 
-pub fn print_table(results: Vec<(f32, comic::ComicIndex)>) {
+pub fn print_table(results: Vec<(f32, comic::Comic)>) {
     let mut stdout = stdout();
     let padding = 4;
     let max_rank_len = 6 + padding;
-    let max_name_len = results.iter().map(|(_, c)| c.comic.title.len()).max().unwrap_or(0).max(6) + padding;
-    let max_num_len = results.iter().map(|(_, c)| c.comic.num.to_string().len()).max().unwrap_or(0).max(13) + padding;
+    let max_name_len = results.iter().map(|(_, c)| c.title.len()).max().unwrap_or(0).max(6) + padding;
+    let max_num_len = results.iter().map(|(_, c)| c.num.to_string().len()).max().unwrap_or(0).max(13) + padding;
 
     let mut output = String::new();
 
@@ -22,8 +22,8 @@ pub fn print_table(results: Vec<(f32, comic::ComicIndex)>) {
             "│ {:<width_rank$}│ {:<width_rank$.4}│ {:<width_name$}│ {:<width_num$}│\n\r",
             index + 1,
             -rank,
-            c.comic.title,
-            c.comic.num,
+            c.title,
+            c.num,
             width_rank = max_rank_len-1,
             width_name = max_name_len-1,
             width_num = max_num_len-1,

@@ -71,7 +71,7 @@ async fn main() -> Result<(), anyhow::Error> {
             let _ = search::interactive_mode(&mut doc);
         } else {
             let res = search(&query, &mut doc);
-            let top_20: Vec<(f32, comic::ComicIndex)> = res.into_iter().take(limit).collect();
+            let top_20: Vec<(f32, comic::Comic)> = res.into_iter().take(limit).collect();
             
             table::print_table(top_20);
         }

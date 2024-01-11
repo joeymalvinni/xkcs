@@ -2,17 +2,18 @@ use std::io::{Write, stdout};
 
 use crossterm::{
     execute,
-    style::{self, Stylize}, cursor, terminal::{EnterAlternateScreen, LeaveAlternateScreen}
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+    cursor
 };
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use crossterm::{event, terminal};
 use std::time::Duration;
 
-use crate::comic::{ComicIndex, ComicFrequency, Document};
+use crate::comic::{Comic, ComicIndex, ComicFrequency, Document};
 use crate::utils::Field;
 use crate::table;
 
-pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
+pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, Comic)> {
     let mut query = q.to_lowercase();
     query.retain(|c| !r#"(),".;:'"#.contains(c)); // strip punctuation
 
@@ -23,19 +24,18 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, ComicIndex)> {
 
         for word in query.split_whitespace() {
             // TODO: add transcript once transcript generated for all comics
-            // TODO: fix partial matches not working
 
             rank += calculate_tf(&word, &comic, &Field::Title) * calculate_idf(&word, &doc.frequency, &Field::Title, doc.comics.len()) * 0.6f32;
             rank +=  calculate_tf(&word, &comic, &Field::Alt) * calculate_idf(&word, &doc.frequency, &Field::Alt, doc.comics.len()) * 0.4f32; 
         }
 
         if rank < 0.0 {
-            result.push((rank, comic.clone()));
+            result.push((rank, comic.comic.clone()));
         }
     }
 
     result.sort_by(|(a, c1), (b, c2)| if a == b {
-        c1.comic.title.partial_cmp(&c2.comic.title).unwrap()
+        c1.title.partial_cmp(&c2.title).unwrap()
     } else {
         a.partial_cmp(b).expect(&format!("{a} and {a} are not comparable"))
     });
@@ -140,7 +140,7 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                 write!(stdout, "\x1b[KSearch: {}", search_string)?;
 
                 let res = search(&search_string, doc);
-                let top_20: Vec<(f32, ComicIndex)> = res.into_iter().take(20).collect();
+                let top_20: Vec<(f32, Comic)> = res.into_iter().take(20).collect();
                 
                 table::print_table(top_20);
 
