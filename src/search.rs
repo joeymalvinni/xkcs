@@ -141,6 +141,14 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
             if let Event::Key(event) = event::read().expect("Failed to read line") { /* add this line */
                 match event {
                     KeyEvent {
+                        code: KeyCode::Esc,
+                        modifiers: event::KeyModifiers::NONE,
+                        kind: event::KeyEventKind::Press,
+                        ..
+                    } => {
+                        search_string.clear();
+                    }
+                    KeyEvent {
                         code: KeyCode::Char(c),
                         modifiers: event::KeyModifiers::NONE,
                         kind: event::KeyEventKind::Press,
@@ -175,14 +183,6 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                         ..
                     } => {
                         search_string.pop();
-                    }
-                    KeyEvent {
-                        code: KeyCode::Backspace,
-                        modifiers: event::KeyModifiers::CONTROL,
-                        kind: event::KeyEventKind::Press,
-                        ..
-                    } => {
-                        search_string.clear();
                     }
                     _ => {}
                 }
