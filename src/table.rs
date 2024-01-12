@@ -32,7 +32,7 @@ pub fn print_table(results: Vec<(f32, comic::Comic)>) {
 
     output += &format!("└{0:─<width_rank$}┴{0:─<width_rank$}┴{0:─<width_name$}┴{0:─<width_num$}┘\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_num = max_num_len);
 
-    execute!(stdout, cursor::MoveTo(0, 25)).expect("Failed to execute command");
+    execute!(stdout, cursor::MoveTo(0, 35)).expect("Failed to execute command");
     execute!(stdout, terminal::Clear(terminal::ClearType::FromCursorUp)).expect("Failed to execute command");
     execute!(stdout, cursor::MoveTo(0, 0)).expect("Failed to execute command");
     print!("{}", output);

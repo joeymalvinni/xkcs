@@ -1,4 +1,4 @@
-use std::io::{Write, stdout};
+use std::io::{Write, stdout}; use std::time::Duration;
 
 use crossterm::{
     execute,
@@ -7,7 +7,7 @@ use crossterm::{
 };
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use crossterm::{event, terminal};
-use std::time::Duration;
+use ndarray::{Array1, Zip};
 
 use crate::comic::{Comic, ComicIndex, ComicFrequency, Document};
 use crate::utils::Field;
@@ -21,16 +21,26 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, Comic)> {
 
     for comic in &doc.comics {
         let mut rank: f32 = 0.0;
-
         for word in query.split_whitespace() {
             // TODO: add transcript once transcript generated for all comics
 
             rank += calculate_tf(&word, &comic, &Field::Title) * calculate_idf(&word, &doc.frequency, &Field::Title, doc.comics.len()) * 0.6f32;
-            rank +=  calculate_tf(&word, &comic, &Field::Alt) * calculate_idf(&word, &doc.frequency, &Field::Alt, doc.comics.len()) * 0.4f32; 
+            rank += calculate_tf(&word, &comic, &Field::Alt) * calculate_idf(&word, &doc.frequency, &Field::Alt, doc.comics.len()) * 0.4f32;
         }
 
         if rank < 0.0 {
             result.push((rank, comic.comic.clone()));
+        } else {
+            let mut text = vec![comic.comic.title.clone(), comic.comic.alt.clone()];
+
+            let fuzzy_scores = fuzzy_find(query.clone(), text);
+            for (candidate, similarity) in fuzzy_scores {
+                rank += similarity as f32;
+            }
+
+            if rank > 0.0 {
+                result.push(((-rank)/8.0, comic.comic.clone()));
+            }
         }
     }
 
@@ -40,9 +50,50 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, Comic)> {
         a.partial_cmp(b).expect(&format!("{a} and {a} are not comparable"))
     });
 
-
     result
 }
+
+fn cosine_similarity(vec1: &Array1<f64>, vec2: &Array1<f64>) -> f64 {
+    let dot_product = Zip::from(vec1).and(vec2).fold(0.0, |acc, &a, &b| acc + a * b);
+    let norm1 = vec1.dot(vec1).sqrt();
+    let norm2 = vec2.dot(vec2).sqrt();
+
+    if norm1 * norm2 == 0.0 {
+        0.0 // division by zero
+    } else {
+        dot_product / (norm1 * norm2)
+    }
+}
+
+fn vectorize_string(s: &str) -> Array1<f64> {
+    let mut vector = Array1::zeros(96); 
+
+    for c in s.chars() {
+        if let Some(index) = c.to_digit(36) {
+            let idx = (index % 96) as usize;
+            vector[idx] += 1.0;
+        }
+    }
+
+    vector
+}
+
+fn fuzzy_find(target: String, candidates: Vec<String>) -> Vec<(String, f64)> {
+    let target_vector = vectorize_string(&target);
+
+    let mut results: Vec<(String, f64)> = Vec::new();
+
+    for candidate in candidates {
+        let candidate_vector = vectorize_string(&candidate);
+        let similarity = cosine_similarity(&target_vector, &candidate_vector);
+        results.push((candidate, similarity));
+    }
+
+    results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    results
+}
+
 
 fn calculate_tf(string: &str, c: &ComicIndex, field: &Field) -> f32 {
     match field {
@@ -136,13 +187,13 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                     _ => {}
                 }
 
-                execute!(stdout, cursor::MoveTo(0, 27))?;
+                execute!(stdout, cursor::MoveTo(0, 37))?;
                 write!(stdout, "\x1b[KSearch: {}", search_string)?;
 
                 let res = search(&search_string, doc);
-                let top_20: Vec<(f32, Comic)> = res.into_iter().take(20).collect();
+                let top_30: Vec<(f32, Comic)> = res.into_iter().take(30).collect();
                 
-                table::print_table(top_20);
+                table::print_table(top_30);
 
                 stdout.flush()?;
             };

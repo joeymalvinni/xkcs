@@ -39,7 +39,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
-    let mut limit = 10;
+    let mut limit = 30;
     let mut query = String::new();
 
     if let Some(l) = args.limit {
