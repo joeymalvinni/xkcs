@@ -18,7 +18,7 @@ pub fn print_table(results: Vec<(f32, comic::Comic)>) {
     output += &format!("│{MAGENTA} {:<width_rank$}{RESET}│{CYAN} {:<width_name$}{RESET}│{GREEN} {:<width_alt$}{RESET}│{RED} {:<width_num$}{RESET}│\n\r", "Rank", "Title", "Alternate", "Comic Number", width_rank = max_rank_len-1, width_name = max_name_len-1, width_alt = max_alt_len-1, width_num = max_num_len-1);
     output += &format!("├{0:─<width_rank$}┼{0:─<width_name$}┼{0:─<width_alt$}┼{0:─<width_num$}┤\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_alt = max_alt_len, width_num = max_num_len);
 
-    for (index, (rank, c)) in results.iter().enumerate() {
+    for (_, (rank, c)) in results.iter().enumerate() {
         let mut a: String = c.alt.chars().take(20).collect::<String>();
         a.push_str("...");
         output += &format!(
@@ -36,7 +36,7 @@ pub fn print_table(results: Vec<(f32, comic::Comic)>) {
 
     output += &format!("└{0:─<width_rank$}┴{0:─<width_name$}┴{0:─<width_alt$}┴{0:─<width_num$}┘\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_alt = max_alt_len, width_num = max_num_len);
 
-    execute!(stdout, cursor::MoveTo(0, 35)).expect("Failed to execute command");
+    execute!(stdout, cursor::MoveTo(0, 24)).expect("Failed to execute command");
     execute!(stdout, terminal::Clear(terminal::ClearType::FromCursorUp)).expect("Failed to execute command");
     execute!(stdout, cursor::MoveTo(0, 0)).expect("Failed to execute command");
     print!("{}", output);

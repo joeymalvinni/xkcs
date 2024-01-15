@@ -31,10 +31,10 @@ pub fn search(q: &str, doc: &mut Document) -> Vec<(f32, Comic)> {
         if rank < 0.0 {
             result.push((rank, comic.comic.clone()));
         } else {
-            let mut text = vec![comic.comic.title.clone(), comic.comic.alt.clone()];
+            let text = vec![comic.comic.title.clone(), comic.comic.alt.clone()];
 
             let fuzzy_scores = fuzzy_find(query.clone(), text);
-            for (candidate, similarity) in fuzzy_scores {
+            for (_, similarity) in fuzzy_scores {
                 rank += similarity as f32;
             }
 
@@ -187,13 +187,13 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                     _ => {}
                 }
 
-                execute!(stdout, cursor::MoveTo(0, 37))?;
+                execute!(stdout, cursor::MoveTo(0, 25))?;
                 write!(stdout, "\x1b[KSearch: {}", search_string)?;
 
                 let res = search(&search_string, doc);
-                let top_30: Vec<(f32, Comic)> = res.into_iter().take(30).collect();
+                let top_20: Vec<(f32, Comic)> = res.into_iter().take(20).collect();
                 
-                table::print_table(top_30);
+                table::print_table(top_20);
 
                 stdout.flush()?;
             };
