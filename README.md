@@ -1,8 +1,8 @@
 # XKCD Search Engine
 Searches locally downloaded and indexed XKCD comics for given search queries.
 
-<img width="1329" alt="image" src="https://github.com/joeymalvinni/xkcs/assets/76851062/6dcd5835-a080-43d4-b92e-ef791f3efb76">
 
+https://github.com/joeymalvinni/xkcs/assets/76851062/6c789a0a-6cea-452d-b139-a6730276d146
 
 
 # Todo:
