@@ -127,7 +127,7 @@ fn calculate_idf(string: &str, df: &ComicFrequency, field: &Field, length: usize
     }
 }
 
-pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
+pub fn interactive_mode(doc: &mut Document, lim: usize) -> anyhow::Result<()> {
     let mut stdout = stdout();
     terminal::enable_raw_mode().expect("Could not turn on Raw mode");
     execute!(stdout, terminal::Clear(terminal::ClearType::All))?;
@@ -187,13 +187,13 @@ pub fn interactive_mode(doc: &mut Document) -> anyhow::Result<()> {
                     _ => {}
                 }
 
-                execute!(stdout, cursor::MoveTo(0, 25))?;
+                execute!(stdout, cursor::MoveTo(0, lim as u16 + 5))?;
                 write!(stdout, "\x1b[KSearch: {}", search_string)?;
 
                 let res = search(&search_string, doc);
-                let top_20: Vec<(f32, Comic)> = res.into_iter().take(20).collect();
+                let top_20: Vec<(f32, Comic)> = res.into_iter().take(lim).collect();
                 
-                table::print_table(top_20);
+                table::print_table(top_20, lim);
 
                 stdout.flush()?;
             };

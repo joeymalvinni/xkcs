@@ -20,7 +20,7 @@ pub struct ComicTable {
     link: String
 }
 
-pub fn print_table(results: Vec<(f32, comic::Comic)>) {
+pub fn print_table(results: Vec<(f32, comic::Comic)>, limit: usize) {
     let mut stdout = stdout();
 
     if results.len() != 0 {
@@ -54,7 +54,7 @@ pub fn print_table(results: Vec<(f32, comic::Comic)>) {
             .with(Modify::new((0, 3)).with(Color::FG_RED));
 
         let output = table.to_string().replace("\n", "\n\r");
-        execute!(stdout, cursor::MoveTo(0, 24)).expect("Failed to execute command");
+        execute!(stdout, cursor::MoveTo(0, limit as u16 + 4)).expect("Failed to execute command");
         execute!(stdout, terminal::Clear(terminal::ClearType::FromCursorUp)).expect("Failed to execute command");
         execute!(stdout, cursor::MoveTo(0, 0)).expect("Failed to execute command");
         print!("{output}");

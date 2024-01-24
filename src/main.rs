@@ -42,13 +42,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut limit = 20;
     let mut query = String::new();
 
-    if let Some(l) = args.limit {
-        limit = l;
-    }
-
-    if let Some(s) = args.search {
-        query = s;
-    }
+    let limit = args.limit.unwrap_or(10);
+    let query = args.search.unwrap_or(String::new());
 
     let client = reqwest::Client::new();
 
@@ -68,12 +63,12 @@ async fn main() -> Result<(), anyhow::Error> {
 
         if query.is_empty() {
             // enter interactive mode
-            let _ = search::interactive_mode(&mut doc);
+            let _ = search::interactive_mode(&mut doc, limit);
         } else {
             let res = search(&query, &mut doc);
             let top_20: Vec<(f32, comic::Comic)> = res.into_iter().take(limit).collect();
             
-            table::print_table(top_20);
+            table::print_table(top_20, limit);
         }
     }
 
