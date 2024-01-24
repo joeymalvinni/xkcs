@@ -2,43 +2,58 @@ use crate::comic;
 use crate::utils::{RED, GREEN, MAGENTA, CYAN, RESET};
 use std::io::{stdout};
 use crossterm::{execute, cursor, terminal};
+use tabled::{
+    settings::{
+        style::{HorizontalLine, Style, VerticalLine},
+        Alignment,
+        Modify,
+        Color
+    },
+    Table, Tabled,
+};
+
+#[derive(Tabled)]
+pub struct ComicTable {
+    rank: String, 
+    title: String,
+    alternate: String,
+    link: String
+}
 
 pub fn print_table(results: Vec<(f32, comic::Comic)>) {
     let mut stdout = stdout();
-    let padding = 4;
-    let max_rank_len = 10;
-    let max_name_len = results.iter().map(|(_, c)| c.title.len()).max().unwrap_or(0).max(6) + padding;
-    let max_alt_len = 20 + padding;
-    let max_num_len = results.iter().map(|(_, c)| c.num.to_string().len()).max().unwrap_or(0).max(13) + padding;
+    let mut t: Vec<ComicTable> = Vec::new();
 
-    let mut output = String::new();
-
-    // Append to the output string
-    output += &format!("┌{0:─<width_rank$}┬{0:─<width_name$}┬{0:─<width_alt$}┬{0:─<width_num$}┐\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_alt = max_alt_len, width_num = max_num_len);
-    output += &format!("│{MAGENTA} {:<width_rank$}{RESET}│{CYAN} {:<width_name$}{RESET}│{GREEN} {:<width_alt$}{RESET}│{RED} {:<width_num$}{RESET}│\n\r", "Rank", "Title", "Alternate", "Comic Number", width_rank = max_rank_len-1, width_name = max_name_len-1, width_alt = max_alt_len-1, width_num = max_num_len-1);
-    output += &format!("├{0:─<width_rank$}┼{0:─<width_name$}┼{0:─<width_alt$}┼{0:─<width_num$}┤\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_alt = max_alt_len, width_num = max_num_len);
-
-    for (_, (rank, c)) in results.iter().enumerate() {
-        let mut a: String = c.alt.chars().take(20).collect::<String>();
+    for (rank, com) in results {
+        let mut a: String = com.alt.chars().take(20).collect::<String>();
         a.push_str("...");
-        output += &format!(
-            "│ {:<width_rank$.4}│ {:<width_name$}│ {:<width_alt$}│ {:<width_num$}│\n\r",
-            -rank,
-            c.title,
-            a,
-            c.num,
-            width_rank = max_rank_len-1,
-            width_name = max_name_len-1,
-            width_alt = max_alt_len-1,
-            width_num = max_num_len-1,
-        );
+        t.push(ComicTable {
+            // truncate decimal hack
+            rank: String::from(format!("{:.4}", -rank)),
+            title: com.title,
+            alternate: a,
+            // this implementation might possibly be the worst way to do this
+            link: String::from(format!("\u{1b}]8;;{}\u{1b}\\{}\u{1b}]8;;\u{1b}\\", format!("https://xkcd.com/{}", com.num), format!("xkcd/{}", com.num)))
+        })
     }
 
-    output += &format!("└{0:─<width_rank$}┴{0:─<width_name$}┴{0:─<width_alt$}┴{0:─<width_num$}┘\n\r", "", width_rank = max_rank_len, width_name = max_name_len, width_alt = max_alt_len, width_num = max_num_len);
+    let theme = Style::modern()
+        .horizontals([(1, HorizontalLine::inherit(Style::modern()))])
+        .verticals([(1, VerticalLine::inherit(Style::modern()))])
+        .remove_horizontal()
+        .remove_vertical();
 
+    let mut table = Table::new(t);
+    table
+        .with(theme)
+        .with(Modify::new((0, 0)).with(Color::FG_MAGENTA))
+        .with(Modify::new((0, 1)).with(Color::FG_CYAN))
+        .with(Modify::new((0, 2)).with(Color::FG_GREEN))
+        .with(Modify::new((0, 3)).with(Color::FG_RED));
+
+    let output = table.to_string().replace("\n", "\n\r");
     execute!(stdout, cursor::MoveTo(0, 24)).expect("Failed to execute command");
     execute!(stdout, terminal::Clear(terminal::ClearType::FromCursorUp)).expect("Failed to execute command");
     execute!(stdout, cursor::MoveTo(0, 0)).expect("Failed to execute command");
-    print!("{}", output);
+    print!("{output}");
 }
-
